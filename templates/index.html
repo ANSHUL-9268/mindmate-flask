@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MindMate - Your Mental Wellness Companion</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: linear-gradient(to right, #0f0c29, #302b63, #24243e);
+      color: #ddd;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 720px;
+      background-color: #1e1e2f;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.4);
+    }
+
+    .logo {
+      text-align: center;
+      font-size: 2rem;
+      color: #6EE7B7;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .chat-box {
+      background-color: #13131f;
+      border-radius: 12px;
+      padding: 16px;
+      height: 400px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .user, .bot {
+      padding: 12px;
+      border-radius: 12px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+
+    .user {
+      background-color: #3b82f6;
+      align-self: flex-end;
+      color: white;
+      font-weight: 500;
+    }
+
+    .bot {
+      background-color: #2e2e48;
+      align-self: flex-start;
+      color: #f4f4f4;
+      font-size: 1rem;
+    }
+
+    .bot ul {
+      padding-left: 18px;
+      margin-top: 6px;
+    }
+
+    .bot strong {
+      color: #d4d4ff;
+    }
+
+    .typing {
+      color: #ccc;
+      font-style: italic;
+      font-size: 0.9rem;
+    }
+
+    .quick-replies {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      margin-bottom: 12px;
+    }
+
+    .quick-replies button {
+      background-color: #3f3f46;
+      color: #f0f0f0;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background-color 0.3s;
+    }
+
+    .quick-replies button:hover {
+      background-color: #6366f1;
+    }
+
+    .input-area {
+      display: flex;
+      gap: 10px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 12px;
+      border-radius: 10px;
+      border: none;
+      background-color: #2c2c38;
+      color: #eee;
+      font-size: 1rem;
+    }
+
+    input[type="text"]:focus {
+      outline: none;
+    }
+
+    button.send-btn {
+      background-color: #6EE7B7;
+      color: #111827;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 20px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    button.send-btn:hover {
+      background-color: #4ade80;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">
+      🩸 MindMate
+    </div>
+    <div class="chat-box" id="chat-box"></div>
+    <div class="quick-replies">
+      <button onclick="sendQuick('I feel anxious')">I feel anxious</button>
+      <button onclick="sendQuick('Motivate me')">Motivate me</button>
+      <button onclick="sendQuick('Give me tips')">Give me tips</button>
+    </div>
+    <div class="input-area">
+      <input type="text" id="user-input" placeholder="Type your message..." onkeypress="checkEnter(event)">
+      <button class="send-btn" onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+
+  <script>
+    function appendMessage(text, sender) {
+      const box = document.getElementById('chat-box');
+      const msg = document.createElement('div');
+      msg.classList.add(sender);
+
+      // Replace Markdown-like asterisks with <strong> and bullet points
+      let formatted = text
+        .replace(/\*{2}([^*]+)\*{2}/g, '<strong>$1</strong>')  // **bold**
+        .replace(/\n\s*\*\s*/g, '<br>• ') // bullet points
+        .replace(/(?:\r\n|\r|\n)/g, '<br>'); // handle line breaks
+
+      msg.innerHTML = formatted;
+      box.appendChild(msg);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function appendTyping() {
+      const box = document.getElementById('chat-box');
+      const typing = document.createElement('div');
+      typing.classList.add('typing');
+      typing.setAttribute('id', 'typing');
+      typing.textContent = 'MindMate is typing...';
+      box.appendChild(typing);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function removeTyping() {
+      const typing = document.getElementById('typing');
+      if (typing) typing.remove();
+    }
+
+    function sendMessage() {
+      const input = document.getElementById("user-input");
+      const message = input.value.trim();
+      if (message === "") return;
+
+      appendMessage(message, 'user');
+      input.value = "";
+      appendTyping();
+
+      fetch('/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message })
+      })
+      .then(response => response.json())
+      .then(data => {
+        removeTyping();
+        appendMessage(data.response, 'bot');
+      })
+      .catch(err => {
+        removeTyping();
+        appendMessage('❌ <strong>Server error.</strong>', 'bot');
+      });
+    }
+
+    function checkEnter(e) {
+      if (e.key === 'Enter') sendMessage();
+    }
+
+    function sendQuick(text) {
+      document.getElementById('user-input').value = text;
+      sendMessage();
+    }
+  </script>
+</body>
+</html>
